@@ -1,0 +1,58 @@
+version: '3.9'
+
+services:
+  votingapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__VotingDB=Host=postgres;Database=votingDB;Username=postgres;Password=postgres
+    networks:
+      - voting-net
+
+  postgres:
+    image: postgres:14-alpine
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=votingDB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - voting-net
+
+volumes:
+  postgres_data:
+
+networks:
+  voting-net:
+    driver: bridge
+
+# version: '3.9'
+
+# services:
+#   postgres:
+#     image: postgres:14-alpine
+#     ports:
+#       - 5432:5432
+#     volumes:
+#       - ~/apps/postgres:/var/lib/postgresql/data
+#     environment:
+#       - POSTGRES_PASSWORD=postgres
+#       - POSTGRES_USER=postgres
+#       - POSTGRES_DB=votingDB
