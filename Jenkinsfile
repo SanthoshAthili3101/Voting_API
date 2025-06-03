@@ -10,7 +10,7 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git credentialsId: 'github-creds', url: 'https://github.com/SanthoshAthili3101/Voting_API.git'
+        git branch: 'main', credentialsId: 'github-creds', url: 'https://github.com/SanthoshAthili3101/Voting_API.git'
       }
     }
 
