@@ -8,15 +8,6 @@ pipeline {
         ECR_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
     }
     stages {
-        stage('Clone Repository') {
-            steps {
-                checkout([$class: 'GitSCM',
-                          branches: [[name: '*/main']],
-                          userRemoteConfigs: [[url: 'https://github.com/SanthoshAthili3101/Voting_API.git',
-                                              credentialsId: 'github-creds']]])
-                sh 'ls -la' // Debug: Verify cloned files
-            }
-        }
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t ${ECR_REPO}:${IMAGE_TAG} .'
@@ -54,7 +45,7 @@ pipeline {
     }
     post {
         always {
-            sh 'docker system prune -f' // Clean up unused Docker objects
+            sh 'docker system prune -f'
         }
         success {
             echo 'Pipeline completed successfully!'
