@@ -1,57 +1,42 @@
 pipeline {
     agent any
     environment {
-        AWS_REGION = 'ap-south-1'
-        ECR_REPO = 'votingapi'
-        IMAGE_TAG = "v${env.BUILD_ID}"
-        AWS_ACCOUNT_ID = '982081054052'
-        ECR_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
+        DOCKERHUB_USERNAME = 'santhoshathili'   
+        DOCKERHUB_REPO = 'votingapi'
+        IMAGE_TAG = 'latest'
+        IMAGE_URI = "${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:${IMAGE_TAG}"
     }
     stages {
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t ${ECR_REPO}:${IMAGE_TAG} .'
+                sh 'docker build -t ${IMAGE_URI} .'
             }
         }
-        stage('Login to ECR') {
+
+        stage('Login to Docker Hub') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
-                    sh '''
-                        aws configure set default.region ${AWS_REGION}
-                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-                    '''
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+                    sh 'echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin'
                 }
             }
         }
+
         stage('Push Docker Image') {
             steps {
-                sh '''
-                    docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_URI}
-                    docker push ${ECR_URI}
-                '''
-            }
-        }
-        stage('Deploy to EKS') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
-                    sh '''
-                        aws eks update-kubeconfig --name my-eks-cluster --region ${AWS_REGION}
-                        kubectl apply -f deployment.yaml
-                        kubectl apply -f service.yaml
-                    '''
-                }
+                sh 'docker push ${IMAGE_URI}'
             }
         }
     }
+
     post {
         always {
             sh 'docker system prune -f'
         }
         success {
-            echo 'Pipeline completed successfully!'
+            echo 'Docker image pushed to Docker Hub successfully!'
         }
         failure {
-            echo 'Pipeline failed. Check logs for details.'
+            echo 'Pipeline failed. Please check the logs.'
         }
     }
 }
